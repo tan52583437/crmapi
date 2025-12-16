@@ -1,30 +1,34 @@
-# 手机号归属地查询API - 云端部署适配版
+# 手机号归属地查询 API - 完整生产版（适配 Render / gunicorn）
 import os
 import csv
 import re
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+from flask import Flask, request, jsonify, redirect
 
-# ---------------------- 核心配置 ----------------------
+# ---------------------- 初始化 Flask 应用 ----------------------
 app = Flask(__name__)
-CORS(app, resources=r'/*')  # 允许所有跨域请求
 
-# ✅ 动态获取项目根目录，city 文件夹需与 api.py 同级
+# 启用 CORS（允许所有来源跨域请求）
+from flask_cors import CORS
+CORS(app, resources=r'/*')
+
+# ---------------------- 路径配置 ----------------------
+# 自动定位 city/ 目录（与 api.py 同级）
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 LOCAL_ROOT = os.path.join(BASE_DIR, "city")
 
+# 全局号段映射
 SEG_MAP = {}          # {七位号段: (城市, 运营商)}
 SEG_PREFIX_MAP = {}   # {三位前缀: (城市, 运营商)}
 
-# ---------------------- 号段数据加载 ----------------------
+# ---------------------- 数据加载函数 ----------------------
 def load_seg_data():
-    """从 city/ 目录加载所有省份的运营商号段数据（支持 .csv，制表符或逗号分隔）"""
+    """从 city/ 目录递归加载所有 CSV/TSV 号段文件"""
     print("=" * 60)
     print("🚀 开始加载手机号段数据...")
-    print(f"📁 数据根目录: {LOCAL_ROOT}")
+    print(f"📁 数据目录: {LOCAL_ROOT}")
 
     if not os.path.exists(LOCAL_ROOT):
-        print("❌ 错误: city/ 目录不存在！请确保它与 api.py 在同一文件夹。")
+        print("❌ 错误: city/ 目录不存在！请确保它与 api.py 在同一目录。")
         return
 
     city_folders = [f for f in os.listdir(LOCAL_ROOT) if os.path.isdir(os.path.join(LOCAL_ROOT, f))]
@@ -38,7 +42,7 @@ def load_seg_data():
         for csv_file in csv_files:
             file_path = os.path.join(city_path, csv_file)
             try:
-                # 自动检测分隔符（优先 \t，其次 ,）
+                # 自动检测分隔符：优先 \t，其次 ,
                 with open(file_path, "r", encoding="utf-8-sig", errors="ignore") as f:
                     first_line = f.readline().strip()
                     delimiter = "\t" if "\t" in first_line else ","
@@ -64,7 +68,7 @@ def load_seg_data():
                         print(f"⚠️  跳过文件（无法识别运营商）: {csv_file}")
                         continue
 
-                    # 遍历每一行
+                    # 解析每一行的号段列
                     for row in reader:
                         for col in headers:
                             if col in ["省份", "运营商"]:
@@ -88,11 +92,55 @@ def load_seg_data():
     print(f"   - 3位前缀: {len(SEG_PREFIX_MAP)}")
     print("=" * 60)
 
-# ---------------------- API 接口 ----------------------
+# ---------------------- API 路由 ----------------------
+
+@app.route("/")
+def index():
+    """根路径：显示欢迎页面"""
+    return """
+    <html>
+    <head>
+        <title>手机号归属地查询 API</title>
+        <meta charset="utf-8">
+        <style>
+            body { font-family: Arial, sans-serif; padding: 40px; background: #f9f9f9; }
+            h1 { color: #2c3e50; }
+            code { background: #eee; padding: 2px 6px; border-radius: 4px; }
+            ul { line-height: 1.6; }
+        </style>
+    </head>
+    <body>
+        <h1>📞 手机号归属地查询 API</h1>
+        <p>服务已正常运行！</p>
+        <h3>📌 接口说明</h3>
+        <ul>
+            <li><strong>查询接口：</strong> 
+                <code>GET /api/phone/location?phone=13800138000</code>
+            </li>
+            <li><strong>健康检查：</strong> 
+                <code>GET /api/health</code>
+            </li>
+        </ul>
+        <p>💡 示例：<a href="/api/phone/location?phone=13800138000">点击测试查询</a></p>
+    </body>
+    </html>
+    """
+
+@app.route("/api/health")
+def health_check():
+    """健康检查接口"""
+    return jsonify({
+        "status": "ok",
+        "service": "phone-location-api",
+        "data_loaded": len(SEG_MAP) > 0,
+        "seg_7_count": len(SEG_MAP),
+        "seg_3_count": len(SEG_PREFIX_MAP),
+        "message": "服务正常运行中"
+    })
 
 @app.route("/api/phone/location", methods=["GET", "POST"])
 def phone_location():
-    """查询手机号归属地"""
+    """手机号归属地查询接口"""
     phone = (
         request.args.get("phone", "").strip()
         or request.form.get("phone", "").strip()
@@ -103,7 +151,7 @@ def phone_location():
             "code": 400,
             "msg": "请输入11位有效手机号（13/14/15/17/18/19开头）",
             "data": None
-        })
+        }), 400
 
     seg_7 = phone[:7]
     seg_3 = phone[:3]
@@ -131,7 +179,7 @@ def phone_location():
             "code": 404,
             "msg": "未查询到该号段归属地",
             "data": None
-        })
+        }), 404
 
     return jsonify({
         "code": 200,
@@ -139,23 +187,7 @@ def phone_location():
         "data": result
     })
 
-@app.route("/api/health", methods=["GET"])
-def health_check():
-    """健康检查接口（用于验证服务是否正常运行）"""
-    return jsonify({
-        "status": "ok",
-        "service": "phone-location-api",
-        "data_loaded": len(SEG_MAP) > 0,
-        "seg_7_count": len(SEG_MAP),
-        "seg_3_count": len(SEG_PREFIX_MAP)
-    })
-
-# ---------------------- 启动入口 ----------------------
+# ---------------------- 本地调试入口（仅限本地使用）----------------------
 if __name__ == "__main__":
-    load_seg_data()  # 启动时加载数据
-    
-    # 从环境变量读取端口（Render / 云平台会设置 PORT）
-    port = int(os.environ.get("PORT", 5001))
-    
-    # host='0.0.0.0' 允许外部访问，debug=False 适合生产环境
-    app.run(host="0.0.0.0", port=port, debug=False)
+    load_seg_data()
+    app.run(host="127.0.0.1", port=5001, debug=True)
