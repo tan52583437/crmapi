@@ -186,8 +186,3 @@ def phone_location():
         "msg": "查询成功",
         "data": result
     })
-
-# ---------------------- 本地调试入口（仅限本地使用）----------------------
-if __name__ == "__main__":
-    load_seg_data()
-    app.run(host="127.0.0.1", port=5001, debug=True)
