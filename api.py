@@ -6,6 +6,8 @@ from flask import Flask, request, jsonify
 
 # ---------------------- 初始化 Flask 应用 ----------------------
 app = Flask(__name__)
+app.config['JSON_AS_ASCII'] = False
+app.config['JSONIFY_MIMETYPE'] = 'application/json; charset=utf-8'
 
 # 启用 CORS（允许所有来源跨域请求）
 from flask_cors import CORS
