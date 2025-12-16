@@ -1,29 +1,25 @@
-# 手机号归属地查询 API - 完整生产版（适配 Flask 3.0+ + Render + gunicorn）
+# 手机号归属地查询 API - 完整生产版（兼容 Python 3.12 + Flask 3.0.3）
 import os
 import csv
 import re
 import json
-from flask import Flask, request, jsonify
-from flask.json import JSONProvider
-
-# ---------------------- 自定义 JSONProvider（Flask 2.3+ 必须）----------------------
-class UTF8JSONProvider(JSONProvider):
-    def dumps(self, obj, **kwargs):
-        kwargs.setdefault("ensure_ascii", False)
-        kwargs.setdefault("indent", None)
-        return json.dumps(obj, **kwargs)
-
-    def loads(self, s, **kwargs):
-        return json.loads(s, **kwargs)
+from flask import Flask, request, Response
 
 # ---------------------- 初始化 Flask 应用 ----------------------
 app = Flask(__name__)
-app.json = UTF8JSONProvider(app)  # 替换默认 JSON 行为
-app.config['JSONIFY_MIMETYPE'] = 'application/json; charset=utf-8'
 
 # 启用 CORS（允许所有来源跨域请求）
 from flask_cors import CORS
 CORS(app, resources=r'/*')
+
+# ---------------------- 自定义 JSON 响应（确保 UTF-8 中文）----------------------
+def json_response(data, status=200):
+    """返回 UTF-8 编码的 JSON 响应，不转义中文"""
+    return Response(
+        json.dumps(data, ensure_ascii=False, separators=(',', ':')),
+        status=status,
+        mimetype='application/json; charset=utf-8'
+    )
 
 # ---------------------- 路径配置 ----------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -32,7 +28,7 @@ LOCAL_ROOT = os.path.join(BASE_DIR, "city")
 SEG_MAP = {}          # {七位号段: (城市, 运营商)}
 SEG_PREFIX_MAP = {}   # {三位前缀: (城市, 运营商)}
 
-# ---------------------- 数据加载函数 ----------------------
+# ---------------------- 数据加载函数（完全保留你的逻辑）----------------------
 def load_seg_data():
     """从 city/ 目录递归加载所有 CSV/TSV 号段文件"""
     print("=" * 60)
@@ -54,6 +50,7 @@ def load_seg_data():
         for csv_file in csv_files:
             file_path = os.path.join(city_path, csv_file)
             try:
+                # 自动检测分隔符：优先 \t，其次 ,
                 with open(file_path, "r", encoding="utf-8-sig", errors="ignore") as f:
                     first_line = f.readline().strip()
                     delimiter = "\t" if "\t" in first_line else ","
@@ -64,6 +61,7 @@ def load_seg_data():
                     if not headers:
                         continue
 
+                    # 从文件名提取运营商
                     operator = ""
                     if "移动" in csv_file:
                         operator = "移动"
@@ -78,6 +76,7 @@ def load_seg_data():
                         print(f"⚠️  跳过文件（无法识别运营商）: {csv_file}")
                         continue
 
+                    # 解析每一行的号段列
                     for row in reader:
                         for col in headers:
                             if col in ["省份", "运营商"]:
@@ -101,13 +100,14 @@ def load_seg_data():
     print(f"   - 3位前缀: {len(SEG_PREFIX_MAP)}")
     print("=" * 60)
 
-# ---------------------- 加载数据（模块顶层调用）----------------------
+# ---------------------- ✅ 关键：在模块顶层调用数据加载 ----------------------
 load_seg_data()
 
 # ---------------------- API 路由 ----------------------
 
 @app.route("/")
 def index():
+    """根路径：显示欢迎页面"""
     return """
     <html>
     <head>
@@ -139,7 +139,8 @@ def index():
 
 @app.route("/api/health")
 def health_check():
-    return jsonify({
+    """健康检查接口"""
+    return json_response({
         "status": "ok",
         "service": "phone-location-api",
         "data_loaded": len(SEG_MAP) > 0,
@@ -150,17 +151,18 @@ def health_check():
 
 @app.route("/api/phone/location", methods=["GET", "POST"])
 def phone_location():
+    """手机号归属地查询接口"""
     phone = (
         request.args.get("phone", "").strip()
         or request.form.get("phone", "").strip()
     )
 
     if not re.match(r"^1[3-9]\d{9}$", phone):
-        return jsonify({
+        return json_response({
             "code": 400,
             "msg": "请输入11位有效手机号（13/14/15/17/18/19开头）",
             "data": None
-        }), 400
+        }, 400)
 
     seg_7 = phone[:7]
     seg_3 = phone[:3]
@@ -184,13 +186,13 @@ def phone_location():
             "operator": operator
         }
     else:
-        return jsonify({
+        return json_response({
             "code": 404,
             "msg": "未查询到该号段归属地",
             "data": None
-        }), 404
+        }, 404)
 
-    return jsonify({
+    return json_response({
         "code": 200,
         "msg": "查询成功",
         "data": result
