@@ -1,8 +1,8 @@
-# 手机号归属地查询 API - 完整生产版（适配 Render / gunicorn）
+# 手机号归属地查询 API - 完整生产版（适配 Render + gunicorn）
 import os
 import csv
 import re
-from flask import Flask, request, jsonify, redirect
+from flask import Flask, request, jsonify
 
 # ---------------------- 初始化 Flask 应用 ----------------------
 app = Flask(__name__)
@@ -91,6 +91,9 @@ def load_seg_data():
     print(f"   - 7位号段: {len(SEG_MAP)}")
     print(f"   - 3位前缀: {len(SEG_PREFIX_MAP)}")
     print("=" * 60)
+
+# ---------------------- ✅ 关键：在模块顶层调用数据加载 ----------------------
+load_seg_data()
 
 # ---------------------- API 路由 ----------------------
 
