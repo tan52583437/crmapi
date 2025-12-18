@@ -104,11 +104,10 @@ def load_seg_data():
 load_seg_data()
 
 # ---------------------- API 路由 ----------------------
-
 @app.route("/")
 def index():
-    """返回美化后的前端页面"""
-    return '''
+    """根路径：显示美化后的查询页面"""
+    return """
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -197,9 +196,6 @@ def index():
         .error {
             color: #e74c3c;
         }
-        .success {
-            color: #27ae60;
-        }
         footer {
             margin-top: 20px;
             font-size: 13px;
@@ -222,7 +218,7 @@ def index():
         function queryLocation() {
             const phone = document.getElementById("phoneInput").value.trim();
             const resultBox = document.getElementById("resultBox");
-            resultBox.className = "result"; // 重置样式
+            resultBox.className = "result";
 
             if (!/^1[3-9]\\d{9}$/.test(phone)) {
                 resultBox.innerHTML = `<p class="error">❌ 请输入有效的11位手机号（13/14/15/17/18/19开头）</p>`;
@@ -230,7 +226,6 @@ def index():
                 return;
             }
 
-            // 调用你的 API
             fetch(`/api/phone/location?phone=${encodeURIComponent(phone)}`)
                 .then(res => res.json())
                 .then(data => {
@@ -255,11 +250,10 @@ def index():
                 });
         }
 
-        // 支持回车键查询
         document.getElementById("phoneInput").addEventListener("keyup", (e) => {
             if (e.key === "Enter") queryLocation();
         });
     </script>
 </body>
 </html>
-
+"""
