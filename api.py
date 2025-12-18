@@ -104,156 +104,282 @@ def load_seg_data():
 load_seg_data()
 
 # ---------------------- API 路由 ----------------------
+
 @app.route("/")
 def index():
-    """根路径：显示美化后的查询页面"""
+    """根路径：显示美化后的欢迎页面"""
     return """
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>📱 手机号归属地查询</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: "Helvetica Neue", Arial, sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf9 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        .container {
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 500px;
-            padding: 32px;
-            text-align: center;
-        }
-        h1 {
-            color: #2c3e50;
-            margin-bottom: 24px;
-            font-size: 28px;
-        }
-        .input-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        input[type="text"] {
-            flex: 1;
-            padding: 14px;
-            border: 2px solid #ddd;
-            border-radius: 10px;
-            font-size: 16px;
-            outline: none;
-            transition: border-color 0.3s;
-        }
-        input[type="text"]:focus {
-            border-color: #3498db;
-        }
-        button {
-            background: #3498db;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            padding: 14px 24px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        button:hover {
-            background: #2980b9;
-        }
-        .result {
-            margin-top: 24px;
-            padding: 16px;
-            border-radius: 10px;
-            background: #f8f9fa;
-            text-align: left;
-            display: none;
-        }
-        .result.show {
-            display: block;
-        }
-        .result h3 {
-            margin-bottom: 12px;
-            color: #2c3e50;
-        }
-        .result p {
-            margin: 6px 0;
-            font-size: 15px;
-            color: #555;
-        }
-        .error {
-            color: #e74c3c;
-        }
-        footer {
-            margin-top: 20px;
-            font-size: 13px;
-            color: #999;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>📱 手机号归属地查询</h1>
-        <div class="input-group">
-            <input type="text" id="phoneInput" placeholder="请输入11位手机号" maxlength="11" />
-            <button onclick="queryLocation()">查询</button>
-        </div>
-        <div class="result" id="resultBox"></div>
-        <footer>Powered by Phone Location API · 支持 13/14/15/17/18/19 开头号码</footer>
-    </div>
-
-    <script>
-        function queryLocation() {
-            const phone = document.getElementById("phoneInput").value.trim();
-            const resultBox = document.getElementById("resultBox");
-            resultBox.className = "result";
-
-            if (!/^1[3-9]\\d{9}$/.test(phone)) {
-                resultBox.innerHTML = `<p class="error">❌ 请输入有效的11位手机号（13/14/15/17/18/19开头）</p>`;
-                resultBox.classList.add("show");
-                return;
+    <!DOCTYPE html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>手机号归属地查询 API</title>
+        <style>
+            /* 全局样式重置 */
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             }
+            
+            /* 页面背景 */
+            body {
+                background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+                min-height: 100vh;
+                padding: 20px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+            
+            /* 主容器 */
+            .container {
+                background: #ffffff;
+                border-radius: 16px;
+                box-shadow: 0 8px 32px rgba(31, 38, 135, 0.1);
+                padding: 40px;
+                max-width: 800px;
+                width: 100%;
+                border: 1px solid rgba(255, 255, 255, 0.8);
+            }
+            
+            /* 标题样式 */
+            .header {
+                text-align: center;
+                margin-bottom: 30px;
+                border-bottom: 2px solid #e8f4f8;
+                padding-bottom: 20px;
+            }
+            
+            .header h1 {
+                color: #2d3748;
+                font-size: 2.2rem;
+                margin-bottom: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 12px;
+            }
+            
+            .header h1 svg {
+                width: 32px;
+                height: 32px;
+                fill: #4299e1;
+            }
+            
+            .header p {
+                color: #718096;
+                font-size: 1.1rem;
+            }
+            
+            /* 接口说明区域 */
+            .api-section {
+                margin: 25px 0;
+            }
+            
+            .api-section h3 {
+                color: #2d3748;
+                font-size: 1.4rem;
+                margin-bottom: 15px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            
+            .api-section h3 svg {
+                width: 20px;
+                height: 20px;
+                fill: #38b2ac;
+            }
+            
+            .api-list {
+                list-style: none;
+                margin: 20px 0;
+            }
+            
+            .api-list li {
+                background: #f7fafc;
+                border-left: 4px solid #4299e1;
+                padding: 15px 20px;
+                margin-bottom: 12px;
+                border-radius: 8px;
+                transition: all 0.3s ease;
+            }
+            
+            .api-list li:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            }
+            
+            .api-list li strong {
+                color: #2d3748;
+                font-size: 1.05rem;
+                display: block;
+                margin-bottom: 8px;
+            }
+            
+            /* 代码样式 */
+            code {
+                background: #e8f4f8;
+                color: #2b6cb0;
+                padding: 4px 8px;
+                border-radius: 6px;
+                font-family: 'Consolas', 'Monaco', monospace;
+                font-size: 0.95rem;
+                word-break: break-all;
+            }
+            
+            /* 示例链接 */
+            .demo-link {
+                text-align: center;
+                margin-top: 30px;
+                padding-top: 20px;
+                border-top: 1px solid #e8f4f8;
+            }
+            
+            .demo-link a {
+                background: #4299e1;
+                color: white;
+                padding: 12px 24px;
+                border-radius: 8px;
+                text-decoration: none;
+                font-size: 1.1rem;
+                transition: all 0.3s ease;
+                display: inline-block;
+            }
+            
+            .demo-link a:hover {
+                background: #3182ce;
+                transform: translateY(-2px);
+                box-shadow: 0 6px 16px rgba(66, 153, 225, 0.3);
+            }
+            
+            .demo-link p {
+                color: #718096;
+                margin-top: 10px;
+                font-size: 0.95rem;
+            }
+            
+            /* 响应式适配 */
+            @media (max-width: 768px) {
+                .container {
+                    padding: 25px 20px;
+                }
+                
+                .header h1 {
+                    font-size: 1.8rem;
+                }
+                
+                .api-section h3 {
+                    font-size: 1.2rem;
+                }
+                
+                .demo-link a {
+                    padding: 10px 20px;
+                    font-size: 1rem;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>
+                    <svg viewBox="0 0 24 24">
+                        <path d="M20 22h-2v-2c1.65-1.87 3-4.41 3-7 0-5.52-4.48-10-10-10S2 6.48 2 12c0 2.59 1.35 5.13 3 7v2H2v2h2v2h2v-2h8v2h2v-2h2v2h2v-2zm-10-9c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
+                    </svg>
+                    手机号归属地查询 API
+                </h1>
+                <p>✅ 服务已正常运行，接口可正常调用</p>
+            </div>
 
-            fetch(`/api/phone/location?phone=${encodeURIComponent(phone)}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data.code === 200) {
-                        const d = data.data;
-                        resultBox.innerHTML = `
-                            <h3>✅ 查询成功</h3>
-                            <p><strong>手机号：</strong>${d.phone}</p>
-                            <p><strong>匹配方式：</strong>${d.seg_type}（${d.seg}）</p>
-                            <p><strong>归属地：</strong>${d.city}</p>
-                            <p><strong>运营商：</strong>${d.operator}</p>
-                        `;
-                    } else {
-                        resultBox.innerHTML = `<p class="error">⚠️ ${data.msg}</p>`;
-                    }
-                    resultBox.classList.add("show");
-                })
-                .catch(err => {
-                    console.error(err);
-                    resultBox.innerHTML = `<p class="error">❌ 网络错误，请稍后重试</p>`;
-                    resultBox.classList.add("show");
-                });
+            <div class="api-section">
+                <h3>
+                    <svg viewBox="0 0 24 24">
+                        <path d="M11 9h2V6h3V4h-3V1h-2v3H8v2h3v3zm-4 9c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2zm-9.83-3.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.86-7.01L19.42 4h-.01l-1.1 2-2.76 5H8.53l-.13-.27L6.16 6l-.95-2-.94-2H1v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.13 0-.25-.11-.25-.25z"/>
+                    </svg>
+                    接口说明
+                </h3>
+                <ul class="api-list">
+                    <li>
+                        <strong>查询接口</strong>
+                        <code>GET /api/phone/location?phone=13800138000</code>
+                    </li>
+                    <li>
+                        <strong>健康检查</strong>
+                        <code>GET /api/health</code>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="demo-link">
+                <a href="/api/phone/location?phone=13800138000">📱 点击测试手机号查询</a>
+                <p>💡 示例手机号：13800138000（可自行替换为其他11位手机号）</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+
+@app.route("/api/health")
+def health_check():
+    """健康检查接口"""
+    return json_response({
+        "status": "ok",
+        "service": "phone-location-api",
+        "data_loaded": len(SEG_MAP) > 0,
+        "seg_7_count": len(SEG_MAP),
+        "seg_3_count": len(SEG_PREFIX_MAP),
+        "message": "服务正常运行中"
+    })
+
+@app.route("/api/phone/location", methods=["GET", "POST"])
+def phone_location():
+    """手机号归属地查询接口"""
+    phone = (
+        request.args.get("phone", "").strip()
+        or request.form.get("phone", "").strip()
+    )
+
+    if not re.match(r"^1[3-9]\d{9}$", phone):
+        return json_response({
+            "code": 400,
+            "msg": "请输入11位有效手机号（13/14/15/17/18/19开头）",
+            "data": None
+        }, 400)
+
+    seg_7 = phone[:7]
+    seg_3 = phone[:3]
+
+    if seg_7 in SEG_MAP:
+        city, operator = SEG_MAP[seg_7]
+        result = {
+            "phone": phone,
+            "seg": seg_7,
+            "seg_type": "7位号段",
+            "city": city,
+            "operator": operator
         }
+    elif seg_3 in SEG_PREFIX_MAP:
+        city, operator = SEG_PREFIX_MAP[seg_3]
+        result = {
+            "phone": phone,
+            "seg": seg_3,
+            "seg_type": "3位前缀",
+            "city": city,
+            "operator": operator
+        }
+    else:
+        return json_response({
+            "code": 404,
+            "msg": "未查询到该号段归属地",
+            "data": None
+        }, 404)
 
-        document.getElementById("phoneInput").addEventListener("keyup", (e) => {
-            if (e.key === "Enter") queryLocation();
-        });
-    </script>
-</body>
-</html>
-"""
+    return json_response({
+        "code": 200,
+        "msg": "查询成功",
+        "data": result
+    })
