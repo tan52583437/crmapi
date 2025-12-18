@@ -107,7 +107,7 @@ load_seg_data()
 
 @app.route("/")
 def index():
-    """根路径：显示美化后的欢迎页面"""
+    """根路径：显示美化后的欢迎页面（带查询功能）"""
     return """
     <!DOCTYPE html>
     <html lang="zh-CN">
@@ -172,6 +172,136 @@ def index():
             .header p {
                 color: #718096;
                 font-size: 1.1rem;
+            }
+            
+            /* 查询表单区域 */
+            .query-section {
+                background: #f0f8fb;
+                border-radius: 12px;
+                padding: 25px;
+                margin: 25px 0;
+                border: 1px solid #e8f4f8;
+            }
+            
+            .query-section h3 {
+                color: #2d3748;
+                font-size: 1.3rem;
+                margin-bottom: 18px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            
+            .query-section h3 svg {
+                width: 20px;
+                height: 20px;
+                fill: #4299e1;
+            }
+            
+            .query-form {
+                display: flex;
+                gap: 12px;
+                flex-wrap: wrap;
+                align-items: center;
+            }
+            
+            .query-input {
+                flex: 1;
+                min-width: 250px;
+                padding: 12px 16px;
+                border: 2px solid #e2e8f0;
+                border-radius: 8px;
+                font-size: 1.05rem;
+                color: #2d3748;
+                transition: border-color 0.3s ease;
+            }
+            
+            .query-input:focus {
+                outline: none;
+                border-color: #4299e1;
+                box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+            }
+            
+            .query-btn {
+                padding: 12px 24px;
+                background: #4299e1;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 1.05rem;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                white-space: nowrap;
+            }
+            
+            .query-btn:hover {
+                background: #3182ce;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(66, 153, 225, 0.2);
+            }
+            
+            .query-btn:active {
+                transform: translateY(0);
+            }
+            
+            /* 结果展示区域 */
+            .result-section {
+                margin-top: 20px;
+                padding: 20px;
+                border-radius: 8px;
+                display: none;
+            }
+            
+            .result-section.success {
+                display: block;
+                background: #f0fdf4;
+                border: 1px solid #dcfce7;
+            }
+            
+            .result-section.error {
+                display: block;
+                background: #fef2f2;
+                border: 1px solid #fee2e2;
+            }
+            
+            .result-title {
+                font-size: 1.1rem;
+                font-weight: 600;
+                margin-bottom: 12px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            
+            .result-title.success {
+                color: #16a34a;
+            }
+            
+            .result-title.error {
+                color: #dc2626;
+            }
+            
+            .result-content {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 12px;
+                color: #2d3748;
+            }
+            
+            .result-item {
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .result-label {
+                font-size: 0.9rem;
+                color: #718096;
+                margin-bottom: 4px;
+            }
+            
+            .result-value {
+                font-size: 1rem;
+                font-weight: 500;
             }
             
             /* 接口说明区域 */
@@ -280,6 +410,19 @@ def index():
                     padding: 10px 20px;
                     font-size: 1rem;
                 }
+                
+                .query-form {
+                    flex-direction: column;
+                    gap: 10px;
+                }
+                
+                .query-input {
+                    min-width: 100%;
+                }
+                
+                .query-btn {
+                    width: 100%;
+                }
             }
         </style>
     </head>
@@ -293,6 +436,26 @@ def index():
                     手机号归属地查询 API
                 </h1>
                 <p>✅ 服务已正常运行，接口可正常调用</p>
+            </div>
+
+            <!-- 新增查询表单区域 -->
+            <div class="query-section">
+                <h3>
+                    <svg viewBox="0 0 24 24">
+                        <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                    </svg>
+                    在线查询
+                </h3>
+                <div class="query-form">
+                    <input type="tel" class="query-input" id="phoneInput" placeholder="请输入11位手机号（如：13800138000）" maxlength="11">
+                    <button class="query-btn" id="queryBtn">查询归属地</button>
+                </div>
+                
+                <!-- 结果展示区域 -->
+                <div class="result-section" id="resultSection">
+                    <div class="result-title" id="resultTitle"></div>
+                    <div class="result-content" id="resultContent"></div>
+                </div>
             </div>
 
             <div class="api-section">
@@ -319,6 +482,91 @@ def index():
                 <p>💡 示例手机号：13800138000（可自行替换为其他11位手机号）</p>
             </div>
         </div>
+
+        <script>
+            // 获取DOM元素
+            const phoneInput = document.getElementById('phoneInput');
+            const queryBtn = document.getElementById('queryBtn');
+            const resultSection = document.getElementById('resultSection');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultContent = document.getElementById('resultContent');
+
+            // 手机号验证正则（和后端一致）
+            const phoneReg = /^1[3-9]\d{9}$/;
+
+            // 查询按钮点击事件
+            queryBtn.addEventListener('click', async () => {
+                const phone = phoneInput.value.trim();
+                
+                // 清空之前的结果
+                resultSection.className = 'result-section';
+                resultTitle.innerHTML = '';
+                resultContent.innerHTML = '';
+
+                // 前端验证手机号格式
+                if (!phoneReg.test(phone)) {
+                    resultSection.className = 'result-section error';
+                    resultTitle.className = 'result-title error';
+                    resultTitle.innerHTML = '❌ 输入错误';
+                    resultContent.innerHTML = '<div class="result-item"><div class="result-value">请输入11位有效手机号（13/14/15/17/18/19开头）</div></div>';
+                    return;
+                }
+
+                try {
+                    // 调用API接口查询
+                    const response = await fetch(`/api/phone/location?phone=${phone}`);
+                    const data = await response.json();
+
+                    if (data.code === 200) {
+                        // 查询成功
+                        resultSection.className = 'result-section success';
+                        resultTitle.className = 'result-title success';
+                        resultTitle.innerHTML = '✅ 查询成功';
+                        
+                        // 构建结果内容
+                        const result = data.data;
+                        resultContent.innerHTML = `
+                            <div class="result-item">
+                                <span class="result-label">手机号</span>
+                                <span class="result-value">${result.phone}</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">匹配号段</span>
+                                <span class="result-value">${result.seg}（${result.seg_type}）</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">归属城市</span>
+                                <span class="result-value">${result.city}</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">运营商</span>
+                                <span class="result-value">${result.operator}</span>
+                            </div>
+                        `;
+                    } else {
+                        // 查询失败（如未找到号段）
+                        resultSection.className = 'result-section error';
+                        resultTitle.className = 'result-title error';
+                        resultTitle.innerHTML = '❌ 查询失败';
+                        resultContent.innerHTML = `<div class="result-item"><div class="result-value">${data.msg}</div></div>`;
+                    }
+                } catch (error) {
+                    // 网络错误等异常
+                    resultSection.className = 'result-section error';
+                    resultTitle.className = 'result-title error';
+                    resultTitle.innerHTML = '❌ 系统错误';
+                    resultContent.innerHTML = '<div class="result-item"><div class="result-value">查询过程中出现错误，请稍后重试</div></div>';
+                    console.error('查询错误:', error);
+                }
+            });
+
+            // 输入框按回车触发查询
+            phoneInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    queryBtn.click();
+                }
+            });
+        </script>
     </body>
     </html>
     """
